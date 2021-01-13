@@ -1,0 +1,99 @@
+version: '3.5'
+services:
+  rmqnamesrv-a:
+    image: foxiswho/rocketmq:4.7.0
+    container_name: rmqnamesrv-a
+    ports:
+      - 9876:9876
+    volumes:
+      - /home/matcloud/DATA/rocketmq/nameserver-a/logs:/home/rocketmq/logs
+      - /home/matcloud/DATA/rocketmq/nameserver-a/store:/home/rocketmq/store
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Duser.home=/opt -Xms512M -Xmx512M -Xmn128m"
+    networks:
+      rmq:
+        aliases:
+          - rmqnamesrv-a
+
+  rmqnamesrv-b:
+    image: foxiswho/rocketmq:4.7.0
+    container_name: rmqnamesrv-b
+    ports:
+      - 9877:9876
+    volumes:
+      - /home/matcloud/DATA/rocketmq/nameserver-b/logs:/home/rocketmq/logs
+      - /home/matcloud/DATA/rocketmq/nameserver-b/store:/home/rocketmq/store
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Duser.home=/opt -Xms512M -Xmx512M -Xmn128m"
+    networks:
+      rmq:
+        aliases:
+          - rmqnamesrv-b
+
+  rmqbroker-a:
+    image: foxiswho/rocketmq:4.7.0
+    container_name: rmqbroker-a
+    ports:
+      - 10909:10909
+    volumes:
+      - /home/matcloud/DATA/rocketmq/broker-a/logs:/home/rocketmq/logs/rocketmqlogs
+      - /home/matcloud/DATA/rocketmq/broker-a/store:/home/rocketmq/store
+      - /home/matcloud/DATA/rocketmq/broker-a/conf/broker.conf:/etc/rocketmq/broker.conf
+    environment:
+      TZ: Asia/Shanghai
+      NAMESRV_ADDR: "rmqnamesrv-a:9876"
+      JAVA_OPTS: " -Duser.home=/opt"
+      JAVA_OPT_EXT: "-server -Xms256m -Xmx256m -Xmn256m"
+    command: sh mqbroker -c /etc/rocketmq/broker.conf autoCreateTopicEnable=true &
+    links:
+      - rmqnamesrv-a:rmqnamesrv-a
+      - rmqnamesrv-b:rmqnamesrv-b
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-a
+
+  rmqbroker-b:
+    image: foxiswho/rocketmq:4.7.0
+    container_name: rmqbroker-b
+    ports:
+
+      - 10911:10911
+    volumes:
+      - /home/matcloud/DATA/rocketmq/broker-b/logs:/home/rocketmq/logs/rocketmqlogs
+      - /home/matcloud/DATA/rocketmq/broker-b/store:/home/rocketmq/store
+      - /home/matcloud/DATA/rocketmq/broker-b/conf/broker.conf:/etc/rocketmq/broker.conf
+    environment:
+      TZ: Asia/Shanghai
+      NAMESRV_ADDR: "rmqnamesrv-b:9876"
+      JAVA_OPTS: " -Duser.home=/opt"
+      JAVA_OPT_EXT: "-server -Xms256m -Xmx256m -Xmn256m"
+#    command: sh mqbroker -c /etc/rocketmq/broker.conf autoCreateTopicEnable=true &
+    command: sh mqbroker -c /etc/rocketmq/broker.conf autoCreateTopicEnable=true &
+    links:
+      - rmqnamesrv-a:rmqnamesrv-a
+      - rmqnamesrv-b:rmqnamesrv-b
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-b
+  rmqconsole:
+    image: styletang/rocketmq-console-ng
+    container_name: rmqconsole
+    ports:
+      - 8765:8080
+    links:
+      - rmqnamesrv-a:rmqnamesrv-a
+      - rmqnamesrv-b:rmqnamesrv-b
+    environment:
+      JAVA_OPTS: -Drocketmq.namesrv.addr=rmqnamesrv-a:9876;rmqnamesrv-b:9877 -Dcom.rocketmq.sendMessageWithVIPChannel=false
+    networks:
+      rmq:
+        aliases:
+          - rmqconsole
+networks:
+  rmq:
+    name: rmq
+    driver: bridge

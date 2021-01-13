@@ -1,0 +1,93 @@
+version: '3.5'
+services:
+  rmqnamesrv-a:
+    image: rocketmqinc/rocketmq
+    container_name: rmqnamesrv-a
+    ports:
+      - 9876:9876
+    volumes:
+      - /home/matcloud/cloud-server/rocketmq/logs/nameserver-a:/root/logs
+      - /home/matcloud/cloud-server/rocketmq/store/nameserver-a:/root/store
+    command: sh mqnamesrv
+    networks:
+      rmq:
+        aliases:
+          - rmqnamesrv-a
+
+  rmqnamesrv-b:
+    image: rocketmqinc/rocketmq
+    container_name: rmqnamesrv-b
+    ports:
+      - 9877:9877
+    volumes:
+      - /home/matcloud/cloud-server/rocketmq/logs/nameserver-b:/root/logs
+      - /home/matcloud/cloud-server/rocketmq/store/nameserver-b:/root/store
+    command: sh mqnamesrv
+    networks:
+      rmq:
+        aliases:
+          - rmqnamesrv-b
+
+  rmqbroker-a:
+    image: rocketmqinc/rocketmq
+    container_name: rmqbroker-a
+    ports:
+      - 10911:10911
+    volumes:
+      - /home/matcloud/cloud-server/rocketmq/logs/broker-a:/root/logs
+      - /home/matcloud/cloud-server/rocketmq/store/broker-a:/root/store
+      - /home/matcloud/cloud-server/rocketmq/conf/broker-a.conf:/opt/rocketmq-4.4.0/conf/broker.conf
+    environment:
+      TZ: Asia/Shanghai
+      NAMESRV_ADDR: "rmqnamesrv-a:9876"
+      JAVA_OPTS: " -Duser.home=/opt"
+      JAVA_OPT_EXT: "-server -Xms256m -Xmx256m -Xmn256m"
+    command: sh mqbroker -c /opt/rocketmq-4.4.0/conf/broker.conf autoCreateTopicEnable=true &
+    links:
+      - rmqnamesrv-a:rmqnamesrv-a
+      - rmqnamesrv-b:rmqnamesrv-b
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-a
+
+  rmqbroker-b:
+    image: rocketmqinc/rocketmq
+    container_name: rmqbroker-b
+    ports:
+      - 10909:10909
+    volumes:
+      - /home/matcloud/cloud-server/rocketmq/logs/broker-b:/root/logs
+      - /home/matcloud/cloud-server/rocketmq/store/broker-b:/root/store
+      - /home/matcloud/cloud-server/rocketmq/conf/broker-b.conf:/opt/rocketmq-4.4.0/conf/broker.conf
+    environment:
+      TZ: Asia/Shanghai
+      NAMESRV_ADDR: "rmqnamesrv-b:9876"
+      JAVA_OPTS: " -Duser.home=/opt"
+      JAVA_OPT_EXT: "-server -Xms256m -Xmx256m -Xmn256m"
+    command: sh mqbroker -c /opt/rocketmq-4.4.0/conf/broker.conf autoCreateTopicEnable=true &
+    links:
+      - rmqnamesrv-a:rmqnamesrv-a
+      - rmqnamesrv-b:rmqnamesrv-b
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-b
+  rmqconsole:
+    image: styletang/rocketmq-console-ng
+    container_name: rmqconsole
+    ports:
+      - 8765:8080
+    links:
+      - rmqnamesrv-a:rmqnamesrv-a
+      - rmqnamesrv-b:rmqnamesrv-b
+    environment:
+      JAVA_OPTS: -Drocketmq.namesrv.addr=rmqnamesrv-a:9876;rmqnamesrv-b:9877 -Dcom.rocketmq.sendMessageWithVIPChannel=false
+    networks:
+      rmq:
+        aliases:
+          - rmqconsole
+networks:
+  rmq:
+    name: rmq
+    driver: bridge
