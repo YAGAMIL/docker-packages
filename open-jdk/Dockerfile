@@ -14,7 +14,8 @@ FROM python:3.9.1
 
 COPY --from=openjdk:11 /usr/local/openjdk-11 /usr/local/openjdk-11
 #RUN python --version
-RUN pip config set global.index-url https://pypi.doubanio.com/simple/ \
+RUN  pip config set global.index-url https://pypi.doubanio.com/simple/ \
+    && python -m pip install --upgrade --force --ignore-installed pip \
     && pip config set global.trusted-host pypi.doubanio.com  \
     && pip install Mako requests pymatgen apscheduler
 #RUN mkdir -p /jdks \
@@ -22,4 +23,3 @@ RUN pip config set global.index-url https://pypi.doubanio.com/simple/ \
 #    && tar -xJC /jdks
 ENV JAVA_HOME=/usr/local/openjdk-11
 ENV PATH=${JAVA_HOME}/bin:$PATH
-RUN java --version
